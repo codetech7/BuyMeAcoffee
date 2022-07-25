@@ -7,20 +7,21 @@
 const hre = require("hardhat");
 
 async function getBalance(address) {
-  const balance = await hre.waffle.provider.getBalance(address);
-  return hre.ethers.utils.formatEther(balance);
+  // console.log(hre.ethers);
+  console.log(await address.getBalance());
+  // const balance = await hre.waffle.provider.getBalance(address);
+  // return hre.ethers.utils.formatEther(balance);
 }
 
-async function printBalances(addresses){
+async function printBalances(accounts) {
   let idx = 0;
 
-  for(const address of addresses){
-   const balances = await getBalance(address);
-   console.log(`the balance of address ${idx} is ${balances}`)
+  for(const account of accounts){
+   const balances = await account.getBalance();
+   console.log(`the balance of address ${idx} is ${balances}`);
    idx++;
+  
   }
-
- 
 
 }
 
@@ -39,16 +40,23 @@ async function printMemo(memos, miner){
 
 async function main(){
   const [owner, giver1, giver2, giver3] = await hre.ethers.getSigners();
+  const accounts = [owner, giver1, giver2, giver3];
+ 
+  console.log(await owner.getBalance());
+  console.log(owner.address);
   const BuyMeACoffee = await hre.ethers.getContractFactory('buyMeACoffee'); //fetch the buyMeACoffee.sol file.
-  const buyMeACoffee = BuyMeACoffee.deploy();
+  const buyMeACoffee = await BuyMeACoffee.deploy();
 
   //actually depploy the contract
   await buyMeACoffee.deployed();
 
-  const addresses = [owner.address, giver1.address, buyMeACoffee.address]
+  console.log(`the contract was deployed to ${buyMeACoffee.address}`);
+
+  // const addresses = [owner.address, giver1.address, buyMeACoffee.address]
 
   console.log('=-Start-=');//print the balances before donation
-  printBalances(addresses);
+  // await  printBalances(owner);
+  await printBalances(accounts);
 
   //perform donation.
   const tip = {value : hre.ethers.utils.parseEther('1')}
@@ -56,24 +64,25 @@ async function main(){
   buyMeACoffee.connect(giver2).buyCoffee("Lizzy", 'The feminist says hi', tip);
   buyMeACoffee.connect(giver3).buyCoffee("Aasa", 'Take Life Easy Man', tip);
   
-console.log('=-After Donations-=');
-printBalances(addresses);
+  console.log('=-After Donations-=');
+  await printBalances(accounts);
 
-buyMeACoffee.connect(owner).withdrawDonations();
+  await buyMeACoffee.connect(owner).withdrawDonations();
 
-console.log("=-After withdrawing the donations-=");
-printBalances(addresses);
+  // console.log(`the amount that is found in the contract is ${}`);
+  console.log("=-After withdrawing the donations-=");
+  await printBalances(accounts);
 
-//getting out all the memos
-const memos = buyMeACoffee.getMemos();
-const miner  = buyMeACoffee.getMiner();
-printMemo(memos, miner);
+  //getting out all the memos
+  const memos = await  buyMeACoffee.getMemos();
+  const miner  = await  buyMeACoffee.getMiner();
+  await printMemo(memos, miner);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
 // and properly handle errors.
 main().then(() => {
-  console.log(success);
+  console.log('success');
   process.exit(0);
 }).catch((error) => {
   console.error(error);
